@@ -1,8 +1,7 @@
 /// <reference path="classical-calculation.ts" />
+/// <reference path="editable-input-sequence.ts" />
 
 namespace correction {
-  type RealizedInput = ProbabilityMass<Transform>[];  // NOT Distribution - they're masses from separate distributions.
-
   export type TraversableToken<TUnit> = {
     key: TUnit,
     traversal: LexiconTraversal
@@ -34,6 +33,7 @@ namespace correction {
     currentTraversal: LexiconTraversal;
     toKey: (wordform: USVString) => USVString = str => str;
     priorInput: RealizedInput;
+    searchParent: SearchNode;
 
     // Internal lazy-cache for .inputSamplingCost, as it's a bit expensive to re-compute.
     private _inputCost?: number;
@@ -108,6 +108,7 @@ namespace correction {
         searchChild.calculation = childCalc;
         searchChild.priorInput = this.priorInput;
         searchChild.currentTraversal = traversal;
+        searchChild.searchParent = this;
 
         edges.push(searchChild);
       }
@@ -141,7 +142,9 @@ namespace correction {
         // TODO:  transform.deleteRight currently not supported.
 
         let inputPath = Array.from(this.priorInput);
-        inputPath.push(probMass);
+        // FIXME:  A temp stop-gap until the EditableInputSequence structures are integrated.
+        let keyedSample = probMass as ProbabilityMass<KeyedTransform>;
+        inputPath.push(keyedSample);
         // Tokenize and iterate over input chars, adding them into the calc.
         for(let i=0; i < transform.insert.length; i++) {
           let char = transform.insert[i];
@@ -156,6 +159,7 @@ namespace correction {
         let childEdge = new SearchNode(this);
         childEdge.calculation = edgeCalc;
         childEdge.priorInput = inputPath;
+        childEdge.searchParent = this;
 
         edges.push(childEdge);
       }
@@ -184,6 +188,7 @@ namespace correction {
           searchChild.calculation = childCalc;
           searchChild.priorInput = edge.priorInput;
           searchChild.currentTraversal = traversal;
+          searchChild.searchParent = this; // Bypasses the 'intermediate' parent from buildDeletionEdges.
   
           edges.push(searchChild);
         }
@@ -203,7 +208,7 @@ namespace correction {
 
   class SearchSpaceTier {
     correctionQueue: models.PriorityQueue<SearchNode>;
-    processed: SearchNode[] = [];
+    //processed: SearchNode[] = [];
     index: number;
 
     constructor(index: number, initialEdges?: SearchNode[]) {
@@ -406,12 +411,12 @@ namespace correction {
       this.selectionQueue.enqueue(tier);
     }
 
-    // TODO: will want eventually for reversions and/or backspaces
-    removeLastInput() {
-      // 1.  truncate all entries from that search tier; we need to 'restore' extractedResults to match
-      //     the state that would have existed without the last search tier.
-      // 2.  remove the last search tier.  Which may necessitate reconstructing the tier queue, but oh well.
-    }
+    // // TODO: will want eventually for reversions and/or backspaces
+    // removeLastInput() {
+    //   // 1.  truncate all entries from that search tier; we need to 'restore' extractedResults to match
+    //   //     the state that would have existed without the last search tier.
+    //   // 2.  remove the last search tier.  Which may necessitate reconstructing the tier queue, but oh well.
+    // }
 
     private hasNextMatchEntry(): boolean {
       let topQueue = this.selectionQueue.peek();
