@@ -150,6 +150,22 @@ public class MainActivity extends AppCompatActivity implements OnKeyboardEventLi
           KMManager.KMDefault_LanguageID)) {
         KMManager.addKeyboard(this, KMManager.getDefaultKeyboard(getApplicationContext()));
       }
+
+      // DDW testing
+      KMManager.addKeyboard(this, new Keyboard(
+        KMManager.KMDefault_UndefinedPackageID,
+        "khmer_angkor",
+        "Khmer Angkor",
+        "km",
+        "Central Khmer (Khmer, Cambodia)",
+        "1.0.6",
+        "",
+        "",
+        false,
+        "Mondulkiri-R.ttf",
+        "Mondulkiri-R.ttf"
+      ));
+
       SharedPreferences.Editor editor = prefs.edit();
       editor.putBoolean(defaultKeyboardInstalled, true);
       editor.commit();
